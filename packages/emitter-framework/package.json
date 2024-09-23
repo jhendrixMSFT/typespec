@@ -5,7 +5,7 @@
   "private": true,
   "main": "dist/index.js",
   "scripts": {
-    "build-src": "babel src -d dist/src --extensions '.ts,.tsx'",
+    "build-src": "babel src -d dist/src --extensions .ts,.tsx",
     "build": "tsc -p . && npm run build-src",
     "watch-src": "babel src -d dist/src --extensions '.ts,.tsx' --watch",
     "watch-tsc": "tsc -p . --watch",
@@ -16,6 +16,10 @@
     ".": {
       "node": "./dist/src/core/index.js",
       "types": "./dist/src/core/index.d.ts"
+    },
+    "./csharp": {
+      "node": "./dist/src/csharp/index.js",
+      "types": "./dist/src/csharp/index.d.ts"
     },
     "./typescript": {
       "node": "./dist/src/typescript/index.js",
@@ -37,6 +41,7 @@
   },
   "dependencies": {
     "@alloy-js/core": "0.1.0",
+    "@alloy-js/csharp": "0.1.0",
     "@alloy-js/typescript": "0.1.0"
   },
   "devDependencies": {

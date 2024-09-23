@@ -1,0 +1,101 @@
+import { Children, mapJoin, refkey } from "@alloy-js/core";
+import * as csharp from "@alloy-js/csharp";
+import { Operation } from "@typespec/compiler";
+import * as ef from "@typespec/emitter-framework/csharp";
+import { $ } from "@typespec/compiler/typekit";
+
+export interface ClientsProps {
+  operations: Map<string, Array<Operation>>;
+}
+
+export function Clients(props: ClientsProps) {
+  return (
+      mapJoin(props.operations, (clientName, operations) => {
+      return <csharp.SourceFile path={`${clientName}.cs`} using={["System", "System.Net", "System.Net.Http"]}>
+        <csharp.Class name={clientName}>
+          <csharp.ClassMember name="endpoint" type="string" />
+          <csharp.ClassMember name="client" type="HttpClient" />
+          <csharp.ClassConstructor accessModifier="public" parameters={[{name: "endpoint", type: "string"}]}>
+            this.endpoint = endpoint;
+            this.client = new HttpClient();
+          </csharp.ClassConstructor>
+          {mapJoin(operations, (operation) => {
+            let params: Array<csharp.ParameterProps> | undefined;
+            const httpOp = $.httpOperation.get(operation);
+
+            // TODO: this doesn't match 1:1 with param ordering in tsp
+            for (const param of httpOp.parameters.parameters) {
+              if (!params) {
+                params = new Array<csharp.ParameterProps>();
+              }
+              params.push({name: param.name, type: <ef.TypeExpression type={param.param.type} />});
+            }
+
+            if (httpOp.parameters.body) {
+              const body = httpOp.parameters.body;
+              if (!params) {
+                params = new Array<csharp.ParameterProps>();
+              }
+              params.push({name: "body", type: <ef.TypeExpression type={body.type} />});
+            }
+
+            const responses = $.httpOperation.getResponses(operation).filter(r => r.statusCode !== "*")
+
+            let httpResponse: Children | undefined;
+            if (responses[0].responseContent.body?.type && $.model.is(responses[0].responseContent.body.type)) {
+              httpResponse = refkey(responses[0].responseContent.body.type);
+            }
+
+            let clientVerbMethod: string;
+            switch (httpOp.verb) {
+              case "delete":
+                clientVerbMethod = "DeleteAsync";
+                break;
+              case "get":
+                clientVerbMethod = "GetAsync";
+                break;
+              case "head":
+                clientVerbMethod = "HeadAsync";
+                break;
+              case "patch":
+                clientVerbMethod = "PatchAsync";
+                break;
+              case "post":
+                clientVerbMethod = "PostAsync";
+                break;
+              case "put":
+                clientVerbMethod = "PutAsync";
+                break;
+            }
+
+            let opPath = `"${httpOp.path}"`;
+            for (const param of httpOp.parameters.parameters) {
+              switch (param.type) {
+                case "header":
+                  throw new Error("header params NYI");
+                case "path":
+                  opPath += `.Replace("{${param.param.name}}", ${param.name})`;
+                  break;
+                case "query":
+                  // TODO
+              }
+            }
+
+            const queryParams: any = undefined;
+            return (
+              <csharp.ClassMethod accessModifier="public" name={operation.name} parameters={params} returns={httpResponse}>
+                var req = new UriBuilder(this.endpoint + {opPath});{queryParams}
+                var res = this.client.{clientVerbMethod}(req.Uri).Result;
+                if (res.StatusCode != HttpStatusCode.OK)
+                {"{"}
+                  throw new Exception(res.ToString());
+                {"}"}
+              </csharp.ClassMethod>
+            );
+          }, {joiner: "\n\n"})}
+        </csharp.Class>
+      </csharp.SourceFile>
+      },
+      { joiner: "\n\n" })
+  );
+}

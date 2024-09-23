@@ -1,79 +1,41 @@
 {
-  "name": "@typespec/http-client-csharp",
-  "version": "0.1.9",
-  "author": "Microsoft Corporation",
-  "description": "The typespec library that can be used to generate C# models from a TypeSpec REST protocol binding",
-  "homepage": "https://github.com/Microsoft/typespec",
-  "readme": "https://github.com/Microsoft/typespec/blob/main/packages/http-client-csharp/readme.md",
-  "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/Microsoft/typespec.git"
-  },
-  "bugs": {
-    "url": "https://github.com/Microsoft/typespec/issues"
-  },
-  "keywords": [
-    "typespec"
-  ],
+  "name": "http-client-csharp",
+  "version": "0.1.0",
   "type": "module",
-  "main": "dist/emitter/index.js",
-  "exports": {
-    ".": "./dist/emitter/index.js"
-  },
+  "private": true,
+  "main": "dist/index.js",
   "scripts": {
-    "clean": "rimraf ./dist ./emitter/temp && dotnet clean ./generator",
-    "build:emitter": "tsc -p ./emitter/tsconfig.build.json",
-    "build:generator": "dotnet build ./generator",
-    "build": "npm run build:emitter && npm run build:generator && npm run extract-api",
-    "watch": "tsc -p ./emitter/tsconfig.build.json --watch",
-    "lint-typespec-library": "tsp compile . --warn-as-error --import @typespec/library-linter --no-emit",
-    "test:emitter": "vitest run -c ./emitter/vitest.config.ts",
-    "test:generator": "dotnet test ./generator",
-    "test": "npm run test:emitter && npm run test:generator",
-    "test:watch": "vitest -w -c ./emitter/vitest.config.ts",
-    "test:ui": "vitest --ui -c ./emitter/vitest.config.ts",
-    "test:ci": "vitest run  -c ./emitter/vitest.config.ts --coverage --reporter=junit --reporter=default",
-    "lint": "eslint . --max-warnings=0",
-    "lint:fix": "eslint . --fix",
-    "format": "pnpm -w format:dir packages/http-client-csharp",
-    "extract-api": "npx api-extractor run --local --verbose"
+    "build-src": "babel src -d dist --extensions .ts,.tsx",
+    "build": "tsc -p . && npm run build-src",
+    "watch-src": "babel src -d dist/src --extensions '.ts,.tsx' --watch",
+    "watch-tsc": "tsc -p . --watch",
+    "watch": "concurrently --kill-others \"npm run watch-tsc\" \"npm run watch-src\"",
+    "test": "vitest run",
+    "build-sample": "tsp compile sample/main.tsp --emit http-client-csharp && babel tsp-output -d dist/tsp-output --extensions '.ts,.tsx'"
   },
-  "files": [
-    "dist/**"
-  ],
-  "dependencies": {
-    "json-serialize-refs": "0.1.0-0"
-  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
   "peerDependencies": {
-    "@azure-tools/typespec-azure-core": ">=0.44.0 <1.0.0 || ~0.45.0-0 || ~0.46.0-0",
-    "@azure-tools/typespec-client-generator-core": ">=0.44.0 <1.0.0 || ~0.45.0-0 || ~0.46.0-0",
-    "@typespec/compiler": ">=0.58.0 <1.0.0 || ~0.59.0-0 || ~0.60.0-0",
-    "@typespec/http": ">=0.58.0 <1.0.0 || ~0.59.0-0 || ~0.60.0-0",
-    "@typespec/openapi": ">=0.58.0 <1.0.0 || ~0.59.0-0 || ~0.60.0-0",
-    "@typespec/rest": ">=0.58.0 <1.0.0 || ~0.59.0-0 || ~0.60.0-0",
-    "@typespec/versioning": ">=0.58.0 <1.0.0 || ~0.59.0-0 || ~0.60.0-0"
+    "@typespec/compiler": "workspace:*",
+    "@typespec/emitter-framework": "workspace:*",
+    "@typespec/http": "workspace:*",
+    "@typespec/rest": "workspace:*",
+    "@typespec/openapi": "workspace:*"
+  },
+  "dependencies": {
+    "@alloy-js/core": "0.1.0",
+    "@alloy-js/csharp": "0.1.0"
   },
   "devDependencies": {
-    "@azure-tools/cadl-ranch": "0.14.5",
-    "@azure-tools/cadl-ranch-specs": "0.37.2",
-    "@azure-tools/typespec-azure-core": "0.46.0",
-    "@azure-tools/typespec-client-generator-core": "0.46.0",
-    "@microsoft/api-extractor": "^7.40.3",
-    "@types/node": "~18.13.0",
-    "@typespec/compiler": "0.60.0",
-    "@typespec/http": "0.60.0",
-    "@typespec/json-schema": "0.60.0",
-    "@typespec/library-linter": "0.60.0",
-    "@typespec/openapi": "0.60.0",
-    "@typespec/rest": "0.60.0",
-    "@typespec/versioning": "0.60.0",
-    "@typespec/xml": "^0.60.0",
-    "@vitest/coverage-v8": "^1.4.0",
-    "@vitest/ui": "^1.4.0",
-    "c8": "^9.1.0",
-    "rimraf": "~5.0.5",
-    "typescript": "~5.4.3",
-    "vitest": "^1.4.0"
+    "@babel/cli": "^7.24.8",
+    "@babel/core": "^7.24.9",
+    "@rollup/plugin-babel": "^6.0.4",
+    "@alloy-js/babel-preset": "0.1.0",
+    "concurrently": "^8.2.2",
+    "typescript": "^5.5.3",
+    "vitest": "^2.0.3",
+    "ts-morph": "^23.0.0"
   }
 }
