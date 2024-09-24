@@ -42,8 +42,14 @@ export function Clients(props: ClientsProps) {
             const responses = $.httpOperation.getResponses(operation).filter(r => r.statusCode !== "*")
 
             let httpResponse: Children | undefined;
+            let resBody: any = undefined;
             if (responses[0].responseContent.body?.type && $.model.is(responses[0].responseContent.body.type)) {
               httpResponse = refkey(responses[0].responseContent.body.type);
+              const targetSrc = csharp.useSourceFile();
+              targetSrc!.addUsing("System.Net.Http.Json");
+              resBody = <>
+              {"\n"}return HttpContentJsonExtensions.ReadFromJsonAsync{"<"}{httpResponse}{">"}(res.Content).Result;
+              </>
             }
 
             let clientVerbMethod: string;
@@ -69,27 +75,58 @@ export function Clients(props: ClientsProps) {
             }
 
             let opPath = `"${httpOp.path}"`;
+            const rawQP = new Map<string, string>();
             for (const param of httpOp.parameters.parameters) {
               switch (param.type) {
                 case "header":
                   throw new Error("header params NYI");
                 case "path":
-                  opPath += `.Replace("{${param.param.name}}", ${param.name})`;
+                  opPath += `.Replace("{${param.param.name}}", ${param.name}.ToString())`;
                   break;
                 case "query":
-                  // TODO
+                  rawQP.set(param.name, `${param.param.name}.ToString()`);
               }
             }
 
-            const queryParams: any = undefined;
+            let queryParams: any = undefined;
+            if (rawQP.size > 0) {
+              const targetSrc = csharp.useSourceFile();
+              targetSrc!.addUsing("System.Web");
+              queryParams = <>
+              {"\n"}var qp = HttpUtility.ParseQueryString(req.Query);
+              {mapJoin(rawQP, (key, val) => {
+                return <>
+                qp["{key}"] = {val};
+                </>
+              })}
+              req.Query = qp.ToString();
+              </>
+            }
+
+            const reqBody: {
+              toJson: any,
+              bodyParam: any,
+            } = {
+              toJson: undefined,
+              bodyParam: undefined,
+            };
+            if (httpOp.parameters.body) {
+              const targetSrc = csharp.useSourceFile();
+              targetSrc!.addUsing("System.Net.Http.Json");
+              reqBody.toJson = <>
+              {"\n"}var content = JsonContent.Create(body);
+              </>
+              reqBody.bodyParam = ", content";
+            }
+
             return (
               <csharp.ClassMethod accessModifier="public" name={operation.name} parameters={params} returns={httpResponse}>
-                var req = new UriBuilder(this.endpoint + {opPath});{queryParams}
-                var res = this.client.{clientVerbMethod}(req.Uri).Result;
+                var req = new UriBuilder(this.endpoint + {opPath});{queryParams}{reqBody.toJson}
+                var res = this.client.{clientVerbMethod}(req.Uri{reqBody.bodyParam}).Result;
                 if (res.StatusCode != HttpStatusCode.OK)
                 {"{"}
                   throw new Exception(res.ToString());
-                {"}"}
+                {"}"}{resBody}
               </csharp.ClassMethod>
             );
           }, {joiner: "\n\n"})}

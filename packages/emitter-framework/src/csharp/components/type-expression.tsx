@@ -1,3 +1,4 @@
+import * as csharp from "@alloy-js/csharp";
 import { Type } from "@typespec/compiler";
 import { $ } from "@typespec/compiler/typekit";
 import { isArray } from "../../core/utils/typeguards.js";
@@ -23,6 +24,8 @@ function recursiveTypeExpression(type: Type): string {
       }
     case "Model":
       if (isArray(type)) {
+        const targetSrc = csharp.useSourceFile();
+        targetSrc!.addUsing("System.Collections.Generic");
         return `List<${recursiveTypeExpression(type.indexer.value)}>`;
       }
       return type.name;
