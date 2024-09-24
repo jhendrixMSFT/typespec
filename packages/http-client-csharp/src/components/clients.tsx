@@ -1,6 +1,6 @@
 import { Children, mapJoin, refkey } from "@alloy-js/core";
 import * as csharp from "@alloy-js/csharp";
-import { Operation } from "@typespec/compiler";
+import { ModelProperty, Operation } from "@typespec/compiler";
 import * as ef from "@typespec/emitter-framework/csharp";
 import { $ } from "@typespec/compiler/typekit";
 
@@ -13,12 +13,14 @@ export function Clients(props: ClientsProps) {
       mapJoin(props.operations, (clientName, operations) => {
       return <csharp.SourceFile path={`${clientName}.cs`} using={["System", "System.Net", "System.Net.Http"]}>
         <csharp.Class name={clientName}>
-          <csharp.ClassMember name="endpoint" type="string" />
-          <csharp.ClassMember name="client" type="HttpClient" />
+          <csharp.ClassMember accessModifier="private" name="endpoint" type="string" />
+          <csharp.ClassMember accessModifier="private" name="client" type="HttpClient" />
+
           <csharp.ClassConstructor accessModifier="public" parameters={[{name: "endpoint", type: "string"}]}>
             this.endpoint = endpoint;
             this.client = new HttpClient();
           </csharp.ClassConstructor>
+
           {mapJoin(operations, (operation) => {
             let params: Array<csharp.ParameterProps> | undefined;
             const httpOp = $.httpOperation.get(operation);
@@ -75,16 +77,16 @@ export function Clients(props: ClientsProps) {
             }
 
             let opPath = `"${httpOp.path}"`;
-            const rawQP = new Map<string, string>();
+            const rawQP = new Map<string, ModelProperty>();
             for (const param of httpOp.parameters.parameters) {
               switch (param.type) {
                 case "header":
                   throw new Error("header params NYI");
                 case "path":
-                  opPath += `.Replace("{${param.param.name}}", ${param.name}.ToString())`;
+                  opPath += `.Replace("{${param.name}}", ${param.param.name}.ToString())`;
                   break;
                 case "query":
-                  rawQP.set(param.name, `${param.param.name}.ToString()`);
+                  rawQP.set(param.name, param.param);
               }
             }
 
@@ -96,7 +98,7 @@ export function Clients(props: ClientsProps) {
               {"\n"}var qp = HttpUtility.ParseQueryString(req.Query);
               {mapJoin(rawQP, (key, val) => {
                 return <>
-                qp["{key}"] = {val};
+                qp["{key}"] = {`${val.name}.ToString()`};
                 </>
               })}
               req.Query = qp.ToString();

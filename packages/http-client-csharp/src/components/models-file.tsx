@@ -9,18 +9,12 @@ export interface ModelsFileProps {
 }
 
 export function ModelsFile(props: ModelsFileProps) {
-  const declarations: Set<Model> = new Set();
-
   return (
     <csharp.SourceFile path={props.path ?? "models.cs"}>
       {mapJoin(
         props.models,
         (model) => {
           return <ef.ClassDefinition type={model} />
-          /*if(!declarations.has(model)) {
-            declarations.add(model);
-            return <ef.ClassDefinition type={model} />
-          }*/
         },
         { joiner: "\n\n" }
       )}
