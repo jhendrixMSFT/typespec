@@ -1,4 +1,4 @@
-import { Children, mapJoin, refkey } from "@alloy-js/core";
+import { Child, Children, code, mapJoin, refkey } from "@alloy-js/core";
 import * as csharp from "@alloy-js/csharp";
 import { ModelProperty, Operation } from "@typespec/compiler";
 import * as ef from "@typespec/emitter-framework/csharp";
@@ -97,9 +97,16 @@ export function Clients(props: ClientsProps) {
               queryParams = <>
               {"\n"}var qp = HttpUtility.ParseQueryString(req.Query);
               {mapJoin(rawQP, (key, val) => {
-                return <>
-                qp["{key}"] = {`${val.name}.ToString()`};
-                </>
+                let setQP: Child = `qp["${key}"] = ${val.name}.ToString();`;
+                if (val.optional) {
+                  setQP = code`
+                  if (${val.name} != null)
+                  {
+                    ${setQP}
+                  }
+                  `;
+                }
+                return setQP;
               })}
               req.Query = qp.ToString();
               </>
